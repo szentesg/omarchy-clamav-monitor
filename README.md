@@ -17,7 +17,10 @@ record. Click it to open the panel:
   record, opening the full log in your default editor
 
 This plugin is **display only** — it reads ClamAV's own state and does not
-install, configure, remove, or quarantine anything on your system.
+install, configure, remove, or quarantine anything on your system. The
+plugin binary itself never invokes `sudo`; every privileged command below
+is a one-time, manual host setup step you run yourself before installing
+the widget, not something the plugin executes on your behalf.
 
 ## Prerequisites
 
@@ -26,6 +29,11 @@ plus a small companion service (included here) that adds a timestamp to
 each detection, since `clamonacc`'s own log has none.
 
 ### 1. Install and run ClamAV
+
+`sudo` is required here because ClamAV is a system package installed
+outside your home directory, and `clamd`/`freshclam`/`clamonacc` are
+system-wide services that need to run continuously (including before any
+user logs in) — both are root-only operations on Arch.
 
 ```bash
 sudo pacman -S --needed clamav
@@ -45,10 +53,15 @@ request.
 sudo systemctl enable --now clamav-clamonacc.service
 ```
 
+(This step also needs `sudo` — `clamav-clamonacc.service` is a system
+service and only root can enable/start it.)
+
 ### 2. Let your user account read the log
 
-`clamonacc`'s log is root-owned. Grant read access with an ACL rather than
-loosening the file's real permissions:
+`clamonacc`'s log is root-owned, and `setfacl` needs `sudo` to modify
+permissions on a file it doesn't own. Grant read access with an ACL rather
+than loosening the file's real permissions (e.g. `chmod`-ing it world- or
+group-readable):
 
 ```bash
 sudo setfacl -d -m u:"$(whoami)":r /var/log/clamav
@@ -56,6 +69,9 @@ sudo setfacl -m u:"$(whoami)":r /var/log/clamav/clamonacc.log
 ```
 
 ### 3. Install the detection-timestamp service
+
+No `sudo` needed here — this is a `systemctl --user` service, scoped to
+your account, reading a log you were just given ACL access to.
 
 ```bash
 mkdir -p ~/.config/systemd/user
