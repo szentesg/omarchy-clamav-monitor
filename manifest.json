@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "szenti.clamav-monitor",
+  "id": "io.github.szentesg.clamav-monitor",
   "name": "ClamAV Monitor",
   "version": "1.0.0",
   "author": "szenti",
   "license": "MIT",
+  "homepage": "https://github.com/szentesg/omarchy-clamav-monitor",
   "description": "Shows ClamAV on-access scan status: last database update and recent detections.",
   "kinds": ["bar-widget"],
   "activation": "on-demand",

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prints ClamAV status as JSON for the szenti.clamav-monitor bar widget.
+# Prints ClamAV status as JSON for the io.github.szentesg.clamav-monitor bar widget.
 set -uo pipefail
 
 DETECTIONS_LOG="$HOME/.local/state/omarchy/clamav-detections.log"

@@ -59,7 +59,7 @@ sudo setfacl -m u:"$(whoami)":r /var/log/clamav/clamonacc.log
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp ~/.config/omarchy/plugins/szenti.clamav-monitor/systemd/omarchy-clamav-detection-log.service \
+cp ~/.config/omarchy/plugins/io.github.szentesg.clamav-monitor/systemd/omarchy-clamav-detection-log.service \
    ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now omarchy-clamav-detection-log.service
@@ -72,8 +72,8 @@ appends a timestamped copy to `~/.local/state/omarchy/clamav-detections.log`
 ## Install the widget
 
 ```bash
-omarchy plugin clone szenti.clamav-monitor    # or: omarchy plugin add <repo-url> --enable
-omarchy plugin enable szenti.clamav-monitor --section right
+omarchy plugin clone io.github.szentesg.clamav-monitor    # or: omarchy plugin add <repo-url> --enable
+omarchy plugin enable io.github.szentesg.clamav-monitor --section right
 ```
 
 ## Configure
@@ -81,13 +81,13 @@ omarchy plugin enable szenti.clamav-monitor --section right
 The only setting is the background refresh interval (seconds):
 
 ```bash
-omarchy bar set szenti.clamav-monitor refreshIntervalSec 30 --json
+omarchy bar set io.github.szentesg.clamav-monitor refreshIntervalSec 30 --json
 ```
 
 ## Remove
 
 ```bash
-omarchy plugin disable szenti.clamav-monitor
+omarchy plugin disable io.github.szentesg.clamav-monitor
 systemctl --user disable --now omarchy-clamav-detection-log.service
 rm ~/.config/systemd/user/omarchy-clamav-detection-log.service
 ```

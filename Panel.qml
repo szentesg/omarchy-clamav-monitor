@@ -7,11 +7,11 @@ import qs.Ui
 
 Panel {
   id: root
-  moduleName: "szenti.clamav-monitor"
-  ipcTarget: "szenti.clamav-monitor"
+  moduleName: "io.github.szentesg.clamav-monitor"
+  ipcTarget: "io.github.szentesg.clamav-monitor"
 
   readonly property int refreshIntervalSec: setting("refreshIntervalSec", 60)
-  readonly property string scriptPath: Quickshell.env("HOME") + "/.config/omarchy/plugins/szenti.clamav-monitor/bin/status.sh"
+  readonly property string scriptPath: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.szentesg.clamav-monitor/bin/status.sh"
 
   property var clamStatus: ({
     lastUpdateEpoch: 0,

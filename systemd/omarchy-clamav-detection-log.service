@@ -4,7 +4,7 @@ After=default.target
 
 [Service]
 Type=simple
-ExecStart=%h/.config/omarchy/plugins/szenti.clamav-monitor/bin/watch-detections.sh
+ExecStart=%h/.config/omarchy/plugins/io.github.szentesg.clamav-monitor/bin/watch-detections.sh
 Restart=on-failure
 RestartSec=5
 
