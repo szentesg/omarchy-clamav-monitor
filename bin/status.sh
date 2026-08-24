@@ -15,27 +15,24 @@ freshclam_active=$(systemctl is-active clamav-freshclam.service 2>/dev/null)
 [[ $freshclam_active == active ]] && freshclam_bool=true || freshclam_bool=false
 
 # Each line: "YYYY-MM-DD HH:MM:SS <path>: <signature> FOUND"
-found_lines=()
+# Count with wc and take only the last 10 lines with tail so an
+# indefinitely growing log is never loaded into memory in full.
+total=0
 if [[ -r $DETECTIONS_LOG ]]; then
-  while IFS= read -r line; do
-    found_lines+=("$line")
-  done < "$DETECTIONS_LOG"
+  total=$(wc -l < "$DETECTIONS_LOG")
 fi
-total=${#found_lines[@]}
 
 recent_json="[]"
 if (( total > 0 )); then
-  start=$(( total > 10 ? total - 10 : 0 ))
   entries=()
-  for ((i = total - 1; i >= start; i--)); do
-    line="${found_lines[$i]}"
+  while IFS= read -r line; do
     when="${line:0:19}"
     rest="${line:20}"
     when_epoch=$(date -d "$when" +%s 2>/dev/null || echo 0)
     path=$(sed -E 's/^(.*): (.*) FOUND$/\1/' <<<"$rest")
     sig=$(sed -E 's/^(.*): (.*) FOUND$/\2/' <<<"$rest")
     entries+=("$(jq -cn --arg path "$path" --arg sig "$sig" --argjson whenEpoch "$when_epoch" '{path:$path, signature:$sig, whenEpoch:$whenEpoch}')")
-  done
+  done < <(tail -n 10 "$DETECTIONS_LOG" | tac)
   recent_json=$(printf '%s\n' "${entries[@]}" | jq -cs '.')
 fi
 

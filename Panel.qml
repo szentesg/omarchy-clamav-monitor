@@ -12,6 +12,9 @@ Panel {
 
   readonly property int refreshIntervalSec: setting("refreshIntervalSec", 60)
   readonly property string scriptPath: Quickshell.env("HOME") + "/.config/omarchy/plugins/io.github.szentesg.clamav-monitor/bin/status.sh"
+  // Bounds status.sh's stdout even if the script ever regresses and emits
+  // an unbounded amount of data; 10 recent entries fit comfortably under this.
+  readonly property int maxStatusOutputBytes: 65536
 
   property var clamStatus: ({
     lastUpdateEpoch: 0,
@@ -60,6 +63,11 @@ Panel {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
+        if (text.length > root.maxStatusOutputBytes) {
+          // Keep the last known good status rather than parsing a
+          // suspiciously oversized payload.
+          return
+        }
         try {
           root.clamStatus = JSON.parse(text)
         } catch (e) {
@@ -273,6 +281,7 @@ Panel {
 
               Text {
                 text: modelData.signature
+                textFormat: Text.PlainText
                 color: root.bar.urgent
                 font.family: root.bar.fontFamily
                 font.pixelSize: Style.font.bodySmall
@@ -291,6 +300,7 @@ Panel {
 
               Text {
                 text: modelData.path
+                textFormat: Text.PlainText
                 color: Qt.darker(root.bar.foreground, 1.3)
                 font.family: root.bar.fontFamily
                 font.pixelSize: Style.font.caption
