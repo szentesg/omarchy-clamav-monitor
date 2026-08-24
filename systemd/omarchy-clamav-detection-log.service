@@ -1,0 +1,12 @@
+[Unit]
+Description=Timestamp ClamAV on-access detections into a user-readable log
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/omarchy/plugins/szenti.clamav-monitor/bin/watch-detections.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

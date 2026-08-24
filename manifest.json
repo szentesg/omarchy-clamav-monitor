@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "szenti.clamav-monitor",
+  "name": "ClamAV Monitor",
+  "version": "1.0.0",
+  "author": "szenti",
+  "license": "MIT",
+  "description": "Shows ClamAV on-access scan status: last database update and recent detections.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "ClamAV Monitor",
+    "description": "Bar icon that flags ClamAV virus detections; click for last update time and recent detections.",
+    "category": "System",
+    "aliases": ["clamav", "antivirus"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 60
+    },
+    "schema": [
+      { "key": "refreshIntervalSec", "type": "integer", "label": "Refresh interval (seconds)", "min": 10, "max": 600, "step": 10, "defaultValue": 60 }
+    ]
+  }
+}
