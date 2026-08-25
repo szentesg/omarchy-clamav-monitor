@@ -16,6 +16,8 @@ record. Click it to open the panel:
 - An **Open log** button appears once more than 10 detections are on
   record, opening the full log in your default editor
 
+![ClamAV Monitor panel preview](preview.jpg)
+
 This plugin is **display only** — it reads ClamAV's own state and does not
 install, configure, remove, or quarantine anything on your system. The
 plugin binary itself never invokes `sudo`; every privileged command below
