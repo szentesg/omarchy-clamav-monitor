@@ -4,15 +4,18 @@ An [Omarchy](https://omarchy.org/) bar widget that shows ClamAV's on-access
 scan status: when the virus database last updated, whether on-access
 monitoring and auto-update are running, and the most recent detections.
 
-The bar icon switches to the theme's urgent color when a detection is on
-record. Click it to open the panel:
+The bar icon switches to the theme's urgent color while a recent detection's
+file is still present on disk, and stays that color for 10 minutes after the
+last one disappears (quarantined or deleted) before reverting on its own —
+no need to dismiss anything by hand. Click it to open the panel:
 
 - **Last updated** — age of the local virus database
 - **On-access monitoring** / **Auto-update** — live status of `clamd`,
   `clamonacc`, and `freshclam`
 - **Recent detections** — the last 10 hits, each with its signature name,
   timestamp (rendered in your OS's configured date/time format), and file
-  path
+  path. Entries whose file no longer exists are kept for history and marked
+  "Quarantined or removed"
 - An **Open log** button appears once more than 10 detections are on
   record, opening the full log in your default editor
 

@@ -22,12 +22,25 @@ Panel {
     clamonaccActive: false,
     freshclamActive: false,
     total: 0,
+    activeCount: 0,
+    iconUrgent: false,
     recent: [],
     logPath: "/var/log/clamav/clamonacc.log",
     logReadable: false
   })
 
-  readonly property bool hasDetections: clamStatus.total > 0
+  // status.sh keeps this true for a 10-minute grace period after the last
+  // recent detection's file was seen present, even once activeCount drops
+  // to 0, so the bar icon doesn't flip the instant a file is quarantined.
+  readonly property bool hasDetections: clamStatus.iconUrgent
+
+  function statusHeadline() {
+    if (clamStatus.activeCount > 0) {
+      return clamStatus.activeCount + " active detection" + (clamStatus.activeCount === 1 ? "" : "s")
+    }
+    if (clamStatus.iconUrgent) return "No active detections — clearing"
+    return "No detections"
+  }
   readonly property string icon: hasDetections ? "" : ""
 
   function refresh() {
@@ -105,9 +118,7 @@ Panel {
     text: root.icon
     foreground: root.hasDetections ? root.bar.urgent : root.bar.foreground
     slotSize: Style.bar.iconSlot
-    tooltipText: root.hasDetections
-      ? ("ClamAV: " + root.clamStatus.total + " detection" + (root.clamStatus.total === 1 ? "" : "s"))
-      : "ClamAV: no detections"
+    tooltipText: "ClamAV: " + root.statusHeadline()
     onPressed: root.toggle()
   }
 
@@ -169,9 +180,7 @@ Panel {
             }
 
             Text {
-              text: root.hasDetections
-                ? (root.clamStatus.total + " detection" + (root.clamStatus.total === 1 ? "" : "s") + " found")
-                : "No detections"
+              text: root.statusHeadline()
               color: root.hasDetections ? root.bar.urgent : Qt.darker(root.bar.foreground, 1.4)
               font.family: root.bar.fontFamily
               font.pixelSize: Style.font.caption
@@ -282,7 +291,7 @@ Panel {
               Text {
                 text: modelData.signature
                 textFormat: Text.PlainText
-                color: root.bar.urgent
+                color: modelData.present === false ? Qt.darker(root.bar.foreground, 1.4) : root.bar.urgent
                 font.family: root.bar.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 font.bold: true
@@ -305,6 +314,16 @@ Panel {
                 font.family: root.bar.fontFamily
                 font.pixelSize: Style.font.caption
                 elide: Text.ElideMiddle
+                width: parent.width
+              }
+
+              Text {
+                visible: modelData.present === false
+                text: "Quarantined or removed"
+                color: Qt.darker(root.bar.foreground, 1.4)
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.caption
+                font.italic: true
                 width: parent.width
               }
             }
