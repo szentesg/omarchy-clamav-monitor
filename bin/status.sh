@@ -17,6 +17,15 @@ freshclam_active=$(systemctl is-active clamav-freshclam.service 2>/dev/null)
 # Each line: "YYYY-MM-DD HH:MM:SS <path>: <signature> FOUND"
 # Count with wc and take only the last 10 lines with tail so an
 # indefinitely growing log is never loaded into memory in full.
+#
+# Line and field lengths are attacker-controlled (a malicious filename or a
+# custom signature), so each one is hard-truncated below. This bounds the
+# script's own stdout before it ever reaches Panel.qml's StdioCollector,
+# rather than relying solely on that collector's post-hoc byte check.
+MAX_LINE_BYTES=4096
+MAX_FIELD_BYTES=1024
+MAX_OUTPUT_BYTES=65536
+
 total=0
 if [[ -r $DETECTIONS_LOG ]]; then
   total=$(wc -l < "$DETECTIONS_LOG")
@@ -26,11 +35,14 @@ recent_json="[]"
 if (( total > 0 )); then
   entries=()
   while IFS= read -r line; do
+    line="${line:0:MAX_LINE_BYTES}"
     when="${line:0:19}"
     rest="${line:20}"
     when_epoch=$(date -d "$when" +%s 2>/dev/null || echo 0)
     path=$(sed -E 's/^(.*): (.*) FOUND$/\1/' <<<"$rest")
     sig=$(sed -E 's/^(.*): (.*) FOUND$/\2/' <<<"$rest")
+    path="${path:0:MAX_FIELD_BYTES}"
+    sig="${sig:0:MAX_FIELD_BYTES}"
     entries+=("$(jq -cn --arg path "$path" --arg sig "$sig" --argjson whenEpoch "$when_epoch" '{path:$path, signature:$sig, whenEpoch:$whenEpoch}')")
   done < <(tail -n 10 "$DETECTIONS_LOG" | tac)
   recent_json=$(printf '%s\n' "${entries[@]}" | jq -cs '.')
@@ -54,4 +66,4 @@ jq -cn \
     recent: $recent,
     logPath: $logPath,
     logReadable: $logReadable
-  }'
+  }' | head -c "$MAX_OUTPUT_BYTES"
