@@ -1,8 +1,14 @@
 #!/bin/bash
 # Prints ClamAV status as JSON for the io.github.szentesg.clamav-monitor bar widget.
+# Optional $1: epoch of the detection the panel just acknowledged (Panel.qml
+# passes this when it's opened with no detection's file still present). It's
+# only ever recorded here, after re-checking active_count ourselves, so a
+# stale or forged ack can never hide a detection that's still active.
 set -uo pipefail
 
 DETECTIONS_LOG="$HOME/.local/state/omarchy/clamav-detections.log"
+ACK_FILE="$HOME/.local/state/omarchy/clamav-monitor-ack.epoch"
+ack_request="${1:-}"
 # freshclam ships the daily database as .cvd, but once it applies an
 # incremental diff (which happens on the very first auto-update) it
 # converts the file to .cld and the .cvd stops existing. Check both and
@@ -65,6 +71,18 @@ if (( total > 0 )); then
   recent_json=$(printf '%s\n' "${entries[@]}" | jq -cs '.')
 fi
 
+acknowledged_epoch=0
+if [[ -r $ACK_FILE ]]; then
+  acknowledged_epoch=$(<"$ACK_FILE")
+  [[ $acknowledged_epoch =~ ^[0-9]+$ ]] || acknowledged_epoch=0
+fi
+
+if [[ $ack_request =~ ^[0-9]+$ ]] && (( active_count == 0 && ack_request > acknowledged_epoch )); then
+  mkdir -p "$(dirname "$ACK_FILE")" 2>/dev/null
+  echo "$ack_request" > "$ACK_FILE" 2>/dev/null
+  acknowledged_epoch=$ack_request
+fi
+
 jq -cn \
   --argjson lastUpdateEpoch "$last_update_epoch" \
   --argjson clamdActive "$clamd_bool" \
@@ -72,6 +90,7 @@ jq -cn \
   --argjson freshclamActive "$freshclam_bool" \
   --argjson total "$total" \
   --argjson activeCount "$active_count" \
+  --argjson acknowledgedEpoch "$acknowledged_epoch" \
   --arg logPath "$DETECTIONS_LOG" \
   --argjson recent "$recent_json" \
   --argjson logReadable "$([[ -r $DETECTIONS_LOG ]] && echo true || echo false)" \
@@ -82,6 +101,7 @@ jq -cn \
     freshclamActive: $freshclamActive,
     total: $total,
     activeCount: $activeCount,
+    acknowledgedEpoch: $acknowledgedEpoch,
     recent: $recent,
     logPath: $logPath,
     logReadable: $logReadable

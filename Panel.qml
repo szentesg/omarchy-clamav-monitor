@@ -23,6 +23,7 @@ Panel {
     freshclamActive: false,
     total: 0,
     activeCount: 0,
+    acknowledgedEpoch: 0,
     recent: [],
     logPath: "/var/log/clamav/clamonacc.log",
     logReadable: false
@@ -30,13 +31,12 @@ Panel {
 
   // recent[0] is the most recent detection (status.sh emits newest-first).
   readonly property real latestEventEpoch: clamStatus.recent.length > 0 ? clamStatus.recent[0].whenEpoch : 0
-  // Advances to latestEventEpoch only when the panel is opened while no
-  // detection's file is still present, i.e. once you've actually seen that
-  // everything is resolved. An active threat is never dismissed just by
-  // opening the panel.
-  property real acknowledgedEpoch: 0
+  // Sent to status.sh on the next refresh so it can persist the ack to disk
+  // (clamav-monitor-ack.epoch); acknowledgedEpoch above always reflects what's
+  // actually on disk, so the "seen it" state survives plugin/shell restarts.
+  property real pendingAckEpoch: 0
 
-  readonly property bool hasDetections: clamStatus.activeCount > 0 || latestEventEpoch > acknowledgedEpoch
+  readonly property bool hasDetections: clamStatus.activeCount > 0 || latestEventEpoch > clamStatus.acknowledgedEpoch
 
   function statusHeadline() {
     if (clamStatus.activeCount > 0) {
@@ -46,12 +46,21 @@ Panel {
   }
 
   onOpenedChanged: {
-    if (opened && clamStatus.activeCount === 0) acknowledgedEpoch = latestEventEpoch
+    // status.sh re-validates activeCount itself before persisting this, so a
+    // stale read here can't dismiss a detection that's actually still active.
+    if (opened && clamStatus.activeCount === 0 && latestEventEpoch > clamStatus.acknowledgedEpoch) {
+      pendingAckEpoch = latestEventEpoch
+      refresh()
+    }
   }
   readonly property string icon: hasDetections ? "" : ""
 
   function refresh() {
-    if (!statusProc.running) statusProc.running = true
+    if (statusProc.running) return
+    var cmd = ["bash", root.scriptPath]
+    if (root.pendingAckEpoch > 0) cmd.push(String(root.pendingAckEpoch))
+    statusProc.command = cmd
+    statusProc.running = true
   }
 
   function openLog() {
@@ -94,6 +103,7 @@ Panel {
           // Keep the last known good status if the script output is malformed
           // (e.g. mid-write) rather than blanking the panel.
         }
+        root.pendingAckEpoch = 0
       }
     }
   }
