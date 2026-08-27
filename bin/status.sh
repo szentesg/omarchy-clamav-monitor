@@ -71,16 +71,28 @@ if (( total > 0 )); then
   recent_json=$(printf '%s\n' "${entries[@]}" | jq -cs '.')
 fi
 
-acknowledged_epoch=0
-if [[ -r $ACK_FILE ]]; then
-  acknowledged_epoch=$(<"$ACK_FILE")
-  [[ $acknowledged_epoch =~ ^[0-9]+$ ]] || acknowledged_epoch=0
-fi
+# The ack file lives at a predictable path in a user-writable directory, so
+# it's treated as untrusted. dd with iflag=nofollow,nonblock opens it without
+# following a symlink and without blocking on a FIFO, and count bounds the
+# read so an oversized file can't be slurped whole. An epoch is 10-11 digits;
+# 32 bytes is ample.
+acknowledged_epoch=$(dd if="$ACK_FILE" bs=32 count=1 iflag=nofollow,nonblock 2>/dev/null | head -n1 | tr -cd '0-9')
+[[ $acknowledged_epoch =~ ^[0-9]+$ ]] || acknowledged_epoch=0
 
 if [[ $ack_request =~ ^[0-9]+$ ]] && (( active_count == 0 && ack_request > acknowledged_epoch )); then
-  mkdir -p "$(dirname "$ACK_FILE")" 2>/dev/null
-  echo "$ack_request" > "$ACK_FILE" 2>/dev/null
-  acknowledged_epoch=$ack_request
+  ack_dir=$(dirname "$ACK_FILE")
+  # Write to an exclusively created 0600 sibling (mktemp) and rename it into
+  # place. rename(2) is atomic and replaces a symlink at the target instead
+  # of following it, so a planted symlink can't redirect the write.
+  if mkdir -p "$ack_dir" 2>/dev/null &&
+     tmp=$(mktemp "$ack_dir/.clamav-monitor-ack.XXXXXX" 2>/dev/null); then
+    if printf '%s\n' "$ack_request" > "$tmp" 2>/dev/null &&
+       mv -f "$tmp" "$ACK_FILE" 2>/dev/null; then
+      acknowledged_epoch=$ack_request
+    else
+      rm -f "$tmp" 2>/dev/null
+    fi
+  fi
 fi
 
 jq -cn \
