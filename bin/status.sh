@@ -12,11 +12,6 @@ for db in /var/lib/clamav/daily.cld /var/lib/clamav/daily.cvd; do
   db_epoch=$(stat -c %Y "$db" 2>/dev/null || echo 0)
   (( db_epoch > last_update_epoch )) && last_update_epoch=$db_epoch
 done
-# Records the last time any recent detection's file was still present on
-# disk, so the urgent bar icon can stay lit for a grace period after the
-# file is removed/quarantined instead of flipping the instant it's gone.
-LAST_ACTIVE_FILE="$HOME/.local/state/omarchy/clamav-last-active.epoch"
-CLEAR_AFTER_SEC=600
 
 clamd_active=$(systemctl is-active clamav-daemon.service 2>/dev/null)
 clamonacc_active=$(systemctl is-active clamav-clamonacc.service 2>/dev/null)
@@ -70,25 +65,6 @@ if (( total > 0 )); then
   recent_json=$(printf '%s\n' "${entries[@]}" | jq -cs '.')
 fi
 
-now_epoch=$(date +%s)
-if (( active_count > 0 )); then
-  mkdir -p "$(dirname "$LAST_ACTIVE_FILE")" 2>/dev/null
-  echo "$now_epoch" > "$LAST_ACTIVE_FILE" 2>/dev/null
-fi
-
-last_active_epoch=0
-if [[ -r $LAST_ACTIVE_FILE ]]; then
-  last_active_epoch=$(<"$LAST_ACTIVE_FILE")
-  [[ $last_active_epoch =~ ^[0-9]+$ ]] || last_active_epoch=0
-fi
-
-icon_urgent=false
-if (( active_count > 0 )); then
-  icon_urgent=true
-elif (( last_active_epoch > 0 && now_epoch - last_active_epoch < CLEAR_AFTER_SEC )); then
-  icon_urgent=true
-fi
-
 jq -cn \
   --argjson lastUpdateEpoch "$last_update_epoch" \
   --argjson clamdActive "$clamd_bool" \
@@ -96,7 +72,6 @@ jq -cn \
   --argjson freshclamActive "$freshclam_bool" \
   --argjson total "$total" \
   --argjson activeCount "$active_count" \
-  --argjson iconUrgent "$icon_urgent" \
   --arg logPath "$DETECTIONS_LOG" \
   --argjson recent "$recent_json" \
   --argjson logReadable "$([[ -r $DETECTIONS_LOG ]] && echo true || echo false)" \
@@ -107,7 +82,6 @@ jq -cn \
     freshclamActive: $freshclamActive,
     total: $total,
     activeCount: $activeCount,
-    iconUrgent: $iconUrgent,
     recent: $recent,
     logPath: $logPath,
     logReadable: $logReadable

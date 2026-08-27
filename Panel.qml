@@ -23,23 +23,30 @@ Panel {
     freshclamActive: false,
     total: 0,
     activeCount: 0,
-    iconUrgent: false,
     recent: [],
     logPath: "/var/log/clamav/clamonacc.log",
     logReadable: false
   })
 
-  // status.sh keeps this true for a 10-minute grace period after the last
-  // recent detection's file was seen present, even once activeCount drops
-  // to 0, so the bar icon doesn't flip the instant a file is quarantined.
-  readonly property bool hasDetections: clamStatus.iconUrgent
+  // recent[0] is the most recent detection (status.sh emits newest-first).
+  readonly property real latestEventEpoch: clamStatus.recent.length > 0 ? clamStatus.recent[0].whenEpoch : 0
+  // Advances to latestEventEpoch only when the panel is opened while no
+  // detection's file is still present, i.e. once you've actually seen that
+  // everything is resolved. An active threat is never dismissed just by
+  // opening the panel.
+  property real acknowledgedEpoch: 0
+
+  readonly property bool hasDetections: clamStatus.activeCount > 0 || latestEventEpoch > acknowledgedEpoch
 
   function statusHeadline() {
     if (clamStatus.activeCount > 0) {
       return clamStatus.activeCount + " active detection" + (clamStatus.activeCount === 1 ? "" : "s")
     }
-    if (clamStatus.iconUrgent) return "No active detections — clearing"
-    return "No detections"
+    return "No active detections"
+  }
+
+  onOpenedChanged: {
+    if (opened && clamStatus.activeCount === 0) acknowledgedEpoch = latestEventEpoch
   }
   readonly property string icon: hasDetections ? "" : ""
 

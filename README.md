@@ -5,9 +5,9 @@ scan status: when the virus database last updated, whether on-access
 monitoring and auto-update are running, and the most recent detections.
 
 The bar icon switches to the theme's urgent color while a recent detection's
-file is still present on disk, and stays that color for 10 minutes after the
-last one disappears (quarantined or deleted) before reverting on its own —
-no need to dismiss anything by hand. Click it to open the panel:
+file is still present on disk, and stays that color until you open the panel
+after every one of them is gone (quarantined or deleted) — a still-present
+threat is never dismissed just by opening the panel. Click it to open:
 
 - **Last updated** — age of the local virus database
 - **On-access monitoring** / **Auto-update** — live status of `clamd`,
