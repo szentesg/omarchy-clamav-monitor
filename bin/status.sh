@@ -3,14 +3,21 @@
 set -uo pipefail
 
 DETECTIONS_LOG="$HOME/.local/state/omarchy/clamav-detections.log"
-DB="/var/lib/clamav/daily.cvd"
+# freshclam ships the daily database as .cvd, but once it applies an
+# incremental diff (which happens on the very first auto-update) it
+# converts the file to .cld and the .cvd stops existing. Check both and
+# take whichever is newer so this doesn't go stale after the first update.
+last_update_epoch=0
+for db in /var/lib/clamav/daily.cld /var/lib/clamav/daily.cvd; do
+  db_epoch=$(stat -c %Y "$db" 2>/dev/null || echo 0)
+  (( db_epoch > last_update_epoch )) && last_update_epoch=$db_epoch
+done
 # Records the last time any recent detection's file was still present on
 # disk, so the urgent bar icon can stay lit for a grace period after the
 # file is removed/quarantined instead of flipping the instant it's gone.
 LAST_ACTIVE_FILE="$HOME/.local/state/omarchy/clamav-last-active.epoch"
 CLEAR_AFTER_SEC=600
 
-last_update_epoch=$(stat -c %Y "$DB" 2>/dev/null || echo 0)
 clamd_active=$(systemctl is-active clamav-daemon.service 2>/dev/null)
 clamonacc_active=$(systemctl is-active clamav-clamonacc.service 2>/dev/null)
 freshclam_active=$(systemctl is-active clamav-freshclam.service 2>/dev/null)
